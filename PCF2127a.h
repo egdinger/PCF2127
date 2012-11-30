@@ -40,6 +40,17 @@
 #define RAM_wrt_cmd     0x1C
 #define RAM_rd_cmd      0x1D
 
+//The following define control bits and enums, using the names in the datasheet
+//When possible
+
+//Control 1
+#define STOP 0b100000
+#define TSF1 0b10000
+#define POR_OVRD 0b1000
+#define HOUR_MODE_12 0b100
+#define MI 0b10
+#define SI 0b1
+
 /*
  * Checks if the oscillator stop flag has been set
  * Returns a 1 if the flag is set

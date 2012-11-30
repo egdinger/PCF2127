@@ -1,0 +1,151 @@
+\documentclass[letterpaper,11pt]{article}
+% define the title
+\author{Eric Dinger}
+\date{\today\\ Version 1.0}
+\title{PCF2127 RTC Ardunio Library}
+
+%Here are some commands that I've created to use throughout this paper
+
+%This command renders I2C correctly, it's called IIC because non letters are not allowed in macro names
+\newcommand{\IIC}
+{I$^2$C }
+
+\newcommand{\address}[1]
+{\textbf{Address: 0x#1}}
+
+\begin{document}
+
+\maketitle
+
+\section{Overview}
+This document is the design document for an arduino library for the NXP RTC PFC2127a. It will start with an overview of the device registers and the plan for them in the noted version of the library. After the register there will be an interface definiton for the class, along with requirments and return types, along with a definition of the associated data structure for the RTC. The RTC can do either \IIC or SPI communication, but this library will only implement SPI.
+
+\section{Device Registers}
+	\subsection{Control Registers}
+		This version of the library will need to control some of bits in all of the control registers, so it should go ahead and be able to manage them all, including dealing with the bits that are uneeded due to not implementing other functions (timestamp, etc\ldots).
+		\subsubsection{Control 1 \address{00}}
+			Bit 7: External test mode \\
+			Bit 6: Unused \\
+			Bit 5: RTC Source clock running or not, clkout unaffected\\
+			Bit 4: Timestamp interrupt 1\\
+			Bit 3: Power on reset override\\
+			Bit 2: 12/24 hour mode\\
+			Bit 1: Minute interrupt\\
+			Bit 0: Second interrupt
+		\subsubsection{Control 2 \address{01}}
+			Bit 7: Minute or second interrupt generated\\
+			Bit 6: Watchdog flag\\
+			Bit 5: Timestamp interrupt 2\\
+			Bit 4: Alarm interrupt, set when the alarm conditions are met.\\
+			Bit 3: Countdown timer interrupt\\
+			Bit 2: Timestamp interrupt enable\\
+			Bit 1: Alarm interrupt enable\\
+			Bit 0: Countdown timer interupt enable\\
+		\subsubsection{Control 3}
+			Bit [7-5]: Power managment control\\
+			Bit 4: Battery switch over timestamp\\
+			Bit 3: Battery switch over interrupt\\
+			Bit 2: Battery status\\
+			Bit 1: Battery flag interrupt enable\\
+			Bit 0: Battery low interrupt enable\\
+			\\
+			Unsure if the standard power managment will be correct, this decision hinges on the extra power fail detection function. Need to get the actual hardware and test on it.
+	\subsection{Time and Date Registers}
+		The ability read all of the time and date registers will be included in the library. Special attention needs to be payed to Seconds and the oscilator stop flag bit in it.\\
+		\subsubsection{Seconds \address{03}}
+			Bit 7: Oscilator stop flag\\
+			Bit [6-0] Seconds\\
+		\subsubsection{Minutes\address{04}}
+			Nothing unusual
+		\subsubsection{Hours \address{05}}
+			Bit [7-6]: Unused\\
+			12 Hour Mode\\
+			Bit 5: AM/PM\\
+			Bit [4-0]: Hours\\
+			24 Hour Mode\\
+			Bit [5-0]: Hours
+		\subsubsection{Days \address{06}}
+			Nothing unusual
+		\subsubsection{Weekdays \address{07}}
+			Nothing unusual
+		\subsubsection{Months \address{08}}
+			Nothing unusual
+		\subsubsection{Years \address{09}}
+	\subsection{Alarm Registers}
+		For all Alarm registers bit 7 is the enable bit for the alarm.\\
+		\subsubsection{Second Alarm \address{0A}}
+		\subsubsection{Minute Alarm \address{0B}}
+		\subsubsection{Hour Alarm \address{0C}}
+			Varies depending on 12/24 hour mode, same as the hour register.
+		\subsubsection{Day Alarm \address{0D}}
+		\subsubsection{Weekday Alarm \address{0E}}
+	\subsection{CLKOUT Control Register \address{0F}}
+		Bit [7-6]: Temperature measurement period\\
+		Bit [5-3]: Unused\\
+		Bit [2-0]: CLKOUT frequency selection\\
+		This will be included in this version of the library. See the tables on pages 12 and 13 of the data sheet for the values.
+	\subsection{Watchdog Registers}
+		Watchdog will not be implemented in this version of the library.
+	\subsection{Timestamp Registers}
+		Timestamp will not be implemented in this version of library.
+	\subsection{Aging Offset Register \address{19}}
+		Bit [7-4]: Unused\\
+		Bit [3-0]: Againg offset value\\
+		Adjusting the aging offset will not be included in this version of the library.
+	\subsection{Ram Register}
+		Ram writing will not be in this version of this library. I know this a big draw to this RTC chip, but this is orthoginal to the rest of the design work, and can easily be added later.
+
+\section{Class Design}
+	\subsection{Data Structure}
+		To conserve memory only the time and date will be kept in memory. All of the control registers will be read from the device and modified. More to come.
+	\subsection{Public interface}
+		Note: All of the setter methods will have the same operational behavior. They will all read the current value from the RTC then clear and set the desired bits and write out the new value.
+		\subsubsection{Constructor}
+		Type: Void\\
+		Arguments: CS (Chip select) pin.\\
+		Return: Void\\
+		As much as I would like the constructor to be able to read the RTC's status when the class is initialized, I can't do this because it is common for classes to be declared globaly in the Arduino enviroment, and it is quite likely that SPI won't be up and running at this time. So the constructor will zero out the time and date.\\
+		\subsubsection{Begin}
+		Type: Enum\\
+		Arguments: None\\
+		Return: Enum of an error value\\
+		Here we read the control registers and the seconds register, we check the battery status bit and the OSF bit, and the stop bit. If any are set, we return the error, otherwise we return an all clear.
+		\subsubsection{GetTime}
+		Type: \\
+		Arguments: \\
+		Return:\\
+		\subsubsection{SetTime}
+		Type: \\
+		Arguments: \\
+		Return:\\
+		\subsubsection{GetDate}
+		Type: \\
+		Arguments: \\
+		Return:\\
+		\subsubsection{SetDate}
+		Type: \\
+		Arguments: \\
+		Return:\\
+		\subsubsection{SetTempPeriod}
+		Type: void\\
+		Arguments: enum period for temp measuremnt\\
+		Return: void\\
+		Will take an enum, see table on page 12 of datasheet for values.
+		\subsubsection{SetCLKOUT}
+		Type: void\\
+		Arguments: enum of CLKOUT frequency.
+		Return: void\\
+		Will take an enum, see table on page 13 of datasheet.
+		\subsubsection{GetRegister}
+		Type: uint8\_t\\
+		Arguments: Register address\\
+		Return: uint8\_t containg the requested register contents\\
+		The reason this is made public is in this version we aren't going to have getters for every thing, so if we wanted to do one of those operations they would use this.
+		\subsubsection{SetRegister}
+		Type: void\\
+		Arguments: address, uint8\_t with register contents\\
+		Return: void\\
+		The reason this is made public is in this version we aren't going to have setters for every thing, so if we wanted to do one of those operations they would use this.
+	\subsection{Private interface}
+
+\end{document}
